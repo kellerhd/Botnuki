@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Discord;
-using Discord.Commands;
 
 namespace Botnuki
 {
@@ -37,13 +35,9 @@ namespace Botnuki
             {
                 //variable declaration
                 var command = e.Message.RawText.ToLower();
-                var user = e.Message.User;
                 var clist = getArray(command);
                 int successfulAttempts = 0;
                 Server server = e.Server;
-                var roles = server.Roles.ToList();
-                string compare = string.Empty;
-                string ph = string.Empty;
 
                 // command search
                 if (command.StartsWith("/roleadd"))
@@ -51,56 +45,52 @@ namespace Botnuki
                     // remove first 
                     clist.Remove("/roleadd");
 
-                    foreach (string s in clist)
+                    if (clist.Count > 0)
                     {
-                        if (s.Contains("league") || s.Contains("smite") || s.Contains("paladins") || s.Contains("battlerite") || s.Contains("ark"))
+                        foreach (string s in clist)
                         {
-                            ph = char.ToUpper(s[0]) + s.Substring(1);
-                            foreach (var r in roles)
-                            {
-                                compare = r.Name;
-                                if (compare.Contains(ph))//r.Name.Contains(s))
-                                {
-                                    user.AddRoles(server.GetRole(r.Id));
-                                    successfulAttempts++;
-                                }
-                            }
+                            if (!ValidRoles.Contains(s)) continue;
+
+                            var srvRole = GetRole(server, s);
+                            if (srvRole == null) continue;
+
+                            e.Message.User.AddRoles(srvRole);
+                            successfulAttempts++;
                         }
 
+                        if (successfulAttempts == 0)
+                            e.Channel.SendMessage(e.User.Mention + " it looks like the role(s) you requested either don't exist or aren't a role I can manage :(");
+                        else
+                            e.Channel.SendMessage("There you go " + e.User.Mention + "! Your " + successfulAttempts + " role(s) have been added!");
                     }
-
-                    if (successfulAttempts == 0)
-                        e.Channel.SendMessage(e.User.Mention + " it looks like the role(s) you requested either don't exist or aren't a role I can manage :(");
                     else
-                        e.Channel.SendMessage("There you go " + e.User.Mention + "! Your " + successfulAttempts + " role(s) have been added!");
+                        e.Channel.SendMessage("The /roleadd command will allow you to request certain roles that are available to you. The current roles available are as follows: Smite, League, Paladins, Battlerite");
                 }
                 else if (command.StartsWith("/roleremove"))
                 {
                     // remove first 
                     clist.Remove("/roleremove");
 
-                    foreach (string s in clist)
+                    if (clist.Count > 0)
                     {
-                        if (s.Contains("league") || s.Contains("smite") || s.Contains("paladins") || s.Contains("battlerite") || s.Contains("ark"))
+                        foreach (string s in clist)
                         {
-                            ph = char.ToUpper(s[0]) + s.Substring(1);
-                            foreach (var r in roles)
-                            {
-                                compare = r.Name;
-                                if (compare.Contains(ph))//r.Name.Contains(s))
-                                {
-                                    user.RemoveRoles(server.GetRole(r.Id));
-                                    successfulAttempts++;
-                                }
-                            }
+                            if (!ValidRoles.Contains(s)) continue;
+
+                            var srvRole = GetRole(server, s);
+                            if (srvRole == null) continue;
+
+                            e.Message.User.RemoveRoles(srvRole);
+                            successfulAttempts++;
                         }
 
+                        if (successfulAttempts == 0)
+                            e.Channel.SendMessage(e.User.Mention + " it looks like the role(s) you requested to be removed either don't exist or aren't a role I can manage :(");
+                        else
+                            e.Channel.SendMessage("There you go " + e.User.Mention + "! Your " + successfulAttempts + " role(s) have been removed!");
                     }
-
-                    if (successfulAttempts == 0)
-                        e.Channel.SendMessage(e.User.Mention + " it looks like the role(s) you requested to be removed either don't exist or aren't a role I can manage :(");
                     else
-                        e.Channel.SendMessage("There you go " + e.User.Mention + "! Your " + successfulAttempts + " role(s) have been removed!");
+                        e.Channel.SendMessage("The /roleremove command will allow you to request certain roles that are available to you to be removed. The current roles available are as follows: Smite, League, Paladins, Battlerite");
                 }
             }
             catch(Exception ex)
