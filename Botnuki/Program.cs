@@ -59,12 +59,12 @@ namespace Botnuki
                         }
 
                         if (successfulAttempts == 0)
-                            e.Channel.SendMessage(e.User.Mention + " it looks like the role(s) you requested either don't exist or aren't a role I can manage :(");
+                            e.Channel.SendMessage($"{e.User.Mention} it looks like the role(s) you requested either don't exist or aren't a role I can manage :(");
                         else
-                            e.Channel.SendMessage("There you go " + e.User.Mention + "! Your " + successfulAttempts + " role(s) have been added!");
+                            e.Channel.SendMessage($"There you go { e.User.Mention }! { successfulAttempts } role(s) have been added!");
                     }
                     else
-                        e.Channel.SendMessage("The /roleadd command will allow you to request certain roles that are available to you. The current roles available are as follows: Smite, League, Paladins, Battlerite");
+                        e.Channel.SendMessage($@"The /roleadd command will allow you to request certain roles that are available to you. The current roles available are as follows: Smite, League, Paladins, Battlerite");
                 }
                 else if (command.StartsWith("/roleremove"))
                 {
@@ -85,9 +85,9 @@ namespace Botnuki
                         }
 
                         if (successfulAttempts == 0)
-                            e.Channel.SendMessage(e.User.Mention + " it looks like the role(s) you requested to be removed either don't exist or aren't a role I can manage :(");
+                            e.Channel.SendMessage($"{e.User.Mention } it looks like the role(s) you requested to be removed either don't exist or aren't a role I can manage :(");
                         else
-                            e.Channel.SendMessage("There you go " + e.User.Mention + "! Your " + successfulAttempts + " role(s) have been removed!");
+                            e.Channel.SendMessage($"There you go { e.User.Mention }! { successfulAttempts } role(s) have been removed!");
                     }
                     else
                         e.Channel.SendMessage("The /roleremove command will allow you to request certain roles that are available to you to be removed. The current roles available are as follows: Smite, League, Paladins, Battlerite");
