@@ -8,9 +8,12 @@ namespace Botnuki
     class Program
     {
         // class wide variables
-        static string file = "Program.cs";
-        static string eventMethod;
-        private static readonly string[] ValidRoles = { "league", "smite", "paladins", "battlerite", "ark" };
+        static string file = "Program.cs", eventMethod;
+        private static readonly string[] ValidRoles = { "league", "smite", "paladins", "battlerite", "ark" }, AdminRoles = { "owners", "manager" };
+        static bool activeGiveaway = true;
+        static List<String> giveawayParticipants = new List<String>();
+        static Random rng = new Random();
+        static int r;
 
         static void Main(string[] args)
         {
@@ -36,7 +39,7 @@ namespace Botnuki
                 //variable declaration
                 var command = e.Message.RawText.ToLower();
                 var clist = getArray(command);
-                int successfulAttempts = 0;
+                int successfulAttempts = 0, unsuccessfulAttempts = 0;
                 Server server = e.Server;
 
                 // command search
@@ -47,21 +50,39 @@ namespace Botnuki
 
                     if (clist.Count > 0)
                     {
+                        string roleList = string.Empty, roleFail = string.Empty;
                         foreach (string s in clist)
                         {
                             if (!ValidRoles.Contains(s)) continue;
 
                             var srvRole = GetRole(server, s);
-                            if (srvRole == null) continue;
+                            if (srvRole == null)
+                            {
+                                roleFail += $"• {srvRole}\r\n";
+                                unsuccessfulAttempts++;
+                                continue;
+                            }
 
-                            e.Message.User.AddRoles(srvRole);
-                            successfulAttempts++;
+                            if (e.User.HasRole(srvRole))
+                            {
+                                e.Message.User.AddRoles(srvRole);
+                                successfulAttempts++;
+                                roleList += $"• {srvRole}\r\n";
+                                continue;
+                            }
+                            else
+                            {
+                                roleFail += $"• {srvRole}\r\n";
+                                unsuccessfulAttempts++;
+                                continue;
+                            }
+
                         }
 
-                        if (successfulAttempts == 0)
-                            e.Channel.SendMessage($"{e.User.Mention} it looks like the role(s) you requested either don't exist or aren't a role I can manage :(");
-                        else
-                            e.Channel.SendMessage($"There you go { e.User.Mention }! { successfulAttempts } role(s) have been added!");
+                        if (unsuccessfulAttempts > 0)
+                            e.Channel.SendMessage($"{e.User.Mention} I could not grant some roles for one of the following reasons:\r\n• You have the role(s) already\r\n•The role(s) do not exist\r\n• I can't grant you the role(s)");
+                        if (successfulAttempts > 0)
+                            e.Channel.SendMessage($"There you go { e.User.Mention }! The following role(s) have been added: \r\n{roleList.Substring(0,1).ToUpper() + roleList.Substring(1)}");
                     }
                     else
                         e.Channel.SendMessage($@"The /roleadd command will allow you to request certain roles that are available to you. The current roles available are as follows: Smite, League, Paladins, Battlerite");
@@ -73,30 +94,121 @@ namespace Botnuki
 
                     if (clist.Count > 0)
                     {
+                        string roleList = string.Empty, roleFail = string.Empty;
                         foreach (string s in clist)
                         {
                             if (!ValidRoles.Contains(s)) continue;
 
                             var srvRole = GetRole(server, s);
-                            if (srvRole == null) continue;
+                            if (srvRole == null)
+                            {
+                                roleFail += $"• {srvRole}\r\n";
+                                unsuccessfulAttempts++;
+                                continue;
+                            }
 
-                            e.Message.User.RemoveRoles(srvRole);
-                            successfulAttempts++;
+                            if (!e.User.HasRole(srvRole))
+                            {
+                                e.Message.User.RemoveRoles(srvRole);
+                                successfulAttempts++;
+                                roleList += $"• {srvRole}\r\n";
+                            }
+                            else
+                            {
+                                roleFail += $"• {srvRole}\r\n";
+                                unsuccessfulAttempts++;
+                                continue;
+                            }
+
                         }
 
-                        if (successfulAttempts == 0)
-                            e.Channel.SendMessage($"{e.User.Mention } it looks like the role(s) you requested to be removed either don't exist or aren't a role I can manage :(");
-                        else
-                            e.Channel.SendMessage($"There you go { e.User.Mention }! { successfulAttempts } role(s) have been removed!");
+                        if (unsuccessfulAttempts > 0)
+                            e.Channel.SendMessage($"{e.User.Mention } I could not complete for one of the following reasons:\r\n•The role(s) do not exist\r\n• I can't remove the role(s)");
+                        if (successfulAttempts > 0)
+                            e.Channel.SendMessage($"There you go { e.User.Mention }! The following role(s) have been removed: \r\n{roleList.Substring(0, 1).ToUpper() + roleList.Substring(1)}");
                     }
                     else
                         e.Channel.SendMessage("The /roleremove command will allow you to request certain roles that are available to you to be removed. The current roles available are as follows: Smite, League, Paladins, Battlerite");
+                }
+                else if (command.StartsWith("/entergiveaway"))
+                {
+                        // break if the giveaway is not active
+                        if (activeGiveaway == false)
+                        e.Channel.SendMessage("There is no active giveaway at the moment!");
+                    else
+                    {
+                        var user = e.User;
+                        // store the entering user's name on the giveaway list in a string
+                        if (!giveawayParticipants.Contains(user.Name))
+                        {
+                            giveawayParticipants.Add(user.Name);
+                            e.Channel.SendMessage($"Thank you {user.Mention}! Your entry has been recorded!");
+                        }
+                        else
+                        {
+                            e.Channel.SendMessage($"You have already entered {user.Mention}!");
+                        }
+                    }
+                }
+                else if (command.StartsWith("/drawwinners"))
+                {
+                    // first make sure there is an active giveaway
+                    if (activeGiveaway == false)
+                        e.Channel.SendMessage("There is no active giveaway at the moment!");
+                    else if (giveawayParticipants.Count == 0)
+                        e.Channel.SendMessage("There are no participants in this giveaway!");
+                    else
+                    {
+
+                        // next, remove the first part of the command string
+                        clist.Remove("/drawwinners");
+
+                        if (clist.Count > 0)
+                        {
+                            // then, make sure the user invoking this message is a manager or an owner
+                            foreach (string s in AdminRoles)
+                            {
+                                var srvRoles = GetRole(server, s);
+                                if (srvRoles == null) continue;
+
+                                if (e.User.HasRole(srvRoles))
+                                {
+                                    int j = Convert.ToInt32(clist[1]);
+
+                                    j = (j == 0) ? 1 : j;
+
+                                    string results = "The results are in! The winners are as follows!\r\n";
+
+                                    for (int i = 0; i < j; i++)
+                                    {
+                                        r = rng.Next(giveawayParticipants.Count);
+
+                                        results += $"{ ((i + 1).ToString())}. {giveawayParticipants[r]}\r\n";
+                                        giveawayParticipants.RemoveAt(r);
+                                    }
+
+                                    giveawayParticipants.Clear();
+
+                                    e.Channel.SendMessage(results);
+
+                                }
+                            }
+                        }
+                        else
+                            e.Channel.SendMessage("Enter the number of winners for this giveaway!");
+                    }
                 }
             }
             catch(Exception ex)
             {
                 eventMethod = "bot_MessageReceived";
-                ErrorHandling.ThrowGenException(file, eventMethod, ex.Message);
+                Console.Write(ErrorHandling.ThrowGenException(file, eventMethod, ex.Message));
+                e.Channel.SendMessage(ErrorHandling.ThrowGenException(file, eventMethod, ex.Message));
+
+                string path = AppDomain.CurrentDomain.BaseDirectory;
+                path = path.Substring(0, path.Length - 10);
+                var me = e.Server.GetUser(UInt64.Parse(System.IO.File.ReadAllText($@"{path}myid.txt")));
+                me.SendMessage(ErrorHandling.ThrowGenException(file, eventMethod, ex.Message));
             }
         }
 
