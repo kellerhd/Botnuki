@@ -8,6 +8,10 @@ So far, the functionallity is as follows:
 
 /roleremove [rolename1] [rolename2] [etc] - remove a role or several roles to your user profile
 
+/entergiveaway - enters a giveaway if the activeGiveaway variable is set to true
+
+/drawwinners [number] - selects a number of winners from the pool of entrants to the giveaway
+
 The roles authorized for adding or removal are as follows: Smite, League, Paladins, Battlerite, and Ark.
 
 More features will be added to this bot when determined necessary!
