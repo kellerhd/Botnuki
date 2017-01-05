@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Discord;
+using System.Text;
+using System.IO;
 
 namespace Botnuki
 {
@@ -25,7 +27,7 @@ namespace Botnuki
            {
                string path = AppDomain.CurrentDomain.BaseDirectory;
                path = path.Substring(0, path.Length - 10);
-               await bot.Connect(System.IO.File.ReadAllText($@"{path}inukitvsrvid.txt"), TokenType.Bot);
+               await bot.Connect(File.ReadAllText($@"{path}inukitvsrvid.txt"), TokenType.Bot);
            }
             );
         }
@@ -63,20 +65,10 @@ namespace Botnuki
                                 continue;
                             }
 
-                            if (e.User.HasRole(srvRole))
-                            {
                                 e.Message.User.AddRoles(srvRole);
                                 successfulAttempts++;
                                 roleList += $"• {srvRole}\r\n";
                                 continue;
-                            }
-                            else
-                            {
-                                roleFail += $"• {srvRole}\r\n";
-                                unsuccessfulAttempts++;
-                                continue;
-                            }
-
                         }
 
                         if (unsuccessfulAttempts > 0)
@@ -107,19 +99,9 @@ namespace Botnuki
                                 continue;
                             }
 
-                            if (!e.User.HasRole(srvRole))
-                            {
                                 e.Message.User.RemoveRoles(srvRole);
                                 successfulAttempts++;
                                 roleList += $"• {srvRole}\r\n";
-                            }
-                            else
-                            {
-                                roleFail += $"• {srvRole}\r\n";
-                                unsuccessfulAttempts++;
-                                continue;
-                            }
-
                         }
 
                         if (unsuccessfulAttempts > 0)
@@ -137,12 +119,19 @@ namespace Botnuki
                         e.Channel.SendMessage("There is no active giveaway at the moment!");
                     else
                     {
+                        StringBuilder sr = new StringBuilder(string.Empty);
+                        string path = AppDomain.CurrentDomain.BaseDirectory;
+                        path = path.Substring(0, path.Length - 10);
+                        sr.Append(File.ReadAllText($@"{path}giveawayParticipants.txt"));
+                        
                         var user = e.User;
                         // store the entering user's name on the giveaway list in a string
                         if (!giveawayParticipants.Contains(user.Name))
                         {
                             giveawayParticipants.Add(user.Name);
                             e.Channel.SendMessage($"Thank you {user.Mention}! Your entry has been recorded!");
+                            sr.Append($"{user.Name},");
+                            File.WriteAllText($@"{path}giveawayParticipants.txt", sr.ToString());
                         }
                         else
                         {
@@ -152,6 +141,13 @@ namespace Botnuki
                 }
                 else if (command.StartsWith("/drawwinners"))
                 {
+                    StringBuilder sr = new StringBuilder(string.Empty);
+                    string path = AppDomain.CurrentDomain.BaseDirectory;
+                    path = path.Substring(0, path.Length - 10);
+                    sr.Append(File.ReadAllText($@"{path}giveawayParticipants.txt"));
+
+                    giveawayParticipants = sr.ToString().Split(',').ToList();
+
                     // first make sure there is an active giveaway
                     if (activeGiveaway == false)
                         e.Channel.SendMessage("There is no active giveaway at the moment!");
@@ -159,7 +155,7 @@ namespace Botnuki
                         e.Channel.SendMessage("There are no participants in this giveaway!");
                     else
                     {
-
+                        
                         // next, remove the first part of the command string
                         clist.Remove("/drawwinners");
 
@@ -173,7 +169,7 @@ namespace Botnuki
 
                                 if (e.User.HasRole(srvRoles))
                                 {
-                                    int j = Convert.ToInt32(clist[1]);
+                                    int j = Convert.ToInt32(clist[0]);
 
                                     j = (j == 0) ? 1 : j;
 
@@ -188,7 +184,7 @@ namespace Botnuki
                                     }
 
                                     giveawayParticipants.Clear();
-
+                                    File.WriteAllText($@"{path}giveawayParticipants.txt", string.Empty);
                                     e.Channel.SendMessage(results);
 
                                 }
@@ -207,7 +203,7 @@ namespace Botnuki
 
                 string path = AppDomain.CurrentDomain.BaseDirectory;
                 path = path.Substring(0, path.Length - 10);
-                var me = e.Server.GetUser(UInt64.Parse(System.IO.File.ReadAllText($@"{path}myid.txt")));
+                var me = e.Server.GetUser(UInt64.Parse(File.ReadAllText($@"{path}myid.txt")));
                 me.SendMessage(ErrorHandling.ThrowGenException(file, eventMethod, ex.Message));
             }
         }
