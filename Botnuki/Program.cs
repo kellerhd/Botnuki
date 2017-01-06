@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Discord;
 using System.Text;
 using System.IO;
+using Discord;
+using Discord.Commands;
 
 namespace Botnuki
 {
@@ -19,6 +20,7 @@ namespace Botnuki
 
         static void Main(string[] args)
         {
+            // method vars
             var bot = new DiscordClient();
 
             bot.MessageReceived += bot_MessageReceived;
@@ -38,26 +40,46 @@ namespace Botnuki
         {
             try
             {
-                //variable declaration
+                // method variables
                 var command = e.Message.RawText.ToLower();
-                var clist = getArray(command);
-                int successfulAttempts = 0, unsuccessfulAttempts = 0;
+                bool isAuthorisedUser = ValidationsAndUtilities.IsAuthorisedUser(e.Server, e.User);
+                var param = command.Split(' ').ToList();
+                User u = null;
+                StringBuilder sr = new StringBuilder(string.Empty);
+                string path = AppDomain.CurrentDomain.BaseDirectory;
+                path = path.Substring(0, path.Length - 10);
                 Server server = e.Server;
+                string roleList = string.Empty, roleFail = string.Empty;
+                int successfulAttempts = 0, unsuccessfulAttempts = 0;
+
+                if (isAuthorisedUser == true)
+                {
+                    foreach (var p in param)
+                    {
+                        if (p.Substring(0, 1).Contains(@"@"))
+                        {
+                            u = ValidationsAndUtilities.GetUser(e.Server, p);
+                            param.Remove(p);
+                            break;
+                        }
+
+                        if (u == null) u = e.User;
+                    }
+                }
+                else u = e.User;
 
                 // command search
-                if (command.StartsWith("/roleadd"))
+                
+                switch (param[0])
                 {
-                    // remove first 
-                    clist.Remove("/roleadd");
-
-                    if (clist.Count > 0)
-                    {
-                        string roleList = string.Empty, roleFail = string.Empty;
-                        foreach (string s in clist)
+                    case "/roleadd":
+                        foreach (var role in param)
                         {
-                            if (!ValidRoles.Contains(s)) continue;
+                            var r = role.ToLower();
 
-                            var srvRole = GetRole(server, s);
+                            if (!ValidRoles.Contains(r)) continue;
+
+                            var srvRole = ValidationsAndUtilities.GetRole(server, r);
                             if (srvRole == null)
                             {
                                 roleFail += $"• {srvRole}\r\n";
@@ -65,33 +87,25 @@ namespace Botnuki
                                 continue;
                             }
 
-                                e.Message.User.AddRoles(srvRole);
-                                successfulAttempts++;
-                                roleList += $"• {srvRole}\r\n";
-                                continue;
+                            u.AddRoles(srvRole);
+                            successfulAttempts++;
+                            roleList += $"• {srvRole}\r\n";
+                            continue;
                         }
 
                         if (unsuccessfulAttempts > 0)
-                            e.Channel.SendMessage($"{e.User.Mention} I could not grant some roles for one of the following reasons:\r\n• You have the role(s) already\r\n•The role(s) do not exist\r\n• I can't grant you the role(s)");
+                            e.Channel.SendMessage($"{u.Mention} I could not grant some roles for one of the following reasons:\r\n• You have the role(s) already\r\n•The role(s) do not exist\r\n• I can't grant you the role(s)");
                         if (successfulAttempts > 0)
-                            e.Channel.SendMessage($"There you go { e.User.Mention }! The following role(s) have been added: \r\n{roleList.Substring(0,1).ToUpper() + roleList.Substring(1)}");
-                    }
-                    else
-                        e.Channel.SendMessage($@"The /roleadd command will allow you to request certain roles that are available to you. The current roles available are as follows: Smite, League, Paladins, Battlerite");
-                }
-                else if (command.StartsWith("/roleremove"))
-                {
-                    // remove first 
-                    clist.Remove("/roleremove");
-
-                    if (clist.Count > 0)
-                    {
-                        string roleList = string.Empty, roleFail = string.Empty;
-                        foreach (string s in clist)
+                            e.Channel.SendMessage($"There you go { u.Mention }! The following role(s) have been added: \r\n{roleList.Substring(0, 1).ToUpper() + roleList.Substring(1)}");
+                        break;
+                    case "/roleremove":
+                        foreach (var role in param)
                         {
-                            if (!ValidRoles.Contains(s)) continue;
+                            var r = role.ToLower();
 
-                            var srvRole = GetRole(server, s);
+                            if (!ValidRoles.Contains(r)) continue;
+
+                            var srvRole = ValidationsAndUtilities.GetRole(e.Server, r);
                             if (srvRole == null)
                             {
                                 roleFail += $"• {srvRole}\r\n";
@@ -99,77 +113,61 @@ namespace Botnuki
                                 continue;
                             }
 
-                                e.Message.User.RemoveRoles(srvRole);
-                                successfulAttempts++;
-                                roleList += $"• {srvRole}\r\n";
+                            u.RemoveRoles(srvRole);
+                            successfulAttempts++;
+                            roleList += $"• {srvRole}\r\n";
+                            continue;
                         }
-
                         if (unsuccessfulAttempts > 0)
-                            e.Channel.SendMessage($"{e.User.Mention } I could not complete for one of the following reasons:\r\n•The role(s) do not exist\r\n• I can't remove the role(s)");
+                            e.Channel.SendMessage($"{u.Mention } I could not complete for one of the following reasons:\r\n•The role(s) do not exist\r\n• I can't remove the role(s)");
                         if (successfulAttempts > 0)
-                            e.Channel.SendMessage($"There you go { e.User.Mention }! The following role(s) have been removed: \r\n{roleList.Substring(0, 1).ToUpper() + roleList.Substring(1)}");
-                    }
-                    else
-                        e.Channel.SendMessage("The /roleremove command will allow you to request certain roles that are available to you to be removed. The current roles available are as follows: Smite, League, Paladins, Battlerite");
-                }
-                else if (command.StartsWith("/entergiveaway"))
-                {
+                            e.Channel.SendMessage($"There you go { u.Mention }! The following role(s) have been removed: \r\n{roleList.Substring(0, 1).ToUpper() + roleList.Substring(1)}");
+                        break;
+                    case "/entergiveaway":
                         // break if the giveaway is not active
                         if (activeGiveaway == false)
-                        e.Channel.SendMessage("There is no active giveaway at the moment!");
-                    else
-                    {
-                        StringBuilder sr = new StringBuilder(string.Empty);
-                        string path = AppDomain.CurrentDomain.BaseDirectory;
-                        path = path.Substring(0, path.Length - 10);
-                        sr.Append(File.ReadAllText($@"{path}giveawayParticipants.txt"));
-                        
-                        var user = e.User;
-                        // store the entering user's name on the giveaway list in a string
-                        if (!giveawayParticipants.Contains(user.Name))
-                        {
-                            giveawayParticipants.Add(user.Name);
-                            e.Channel.SendMessage($"Thank you {user.Mention}! Your entry has been recorded!");
-                            sr.Append($"{user.Name},");
-                            File.WriteAllText($@"{path}giveawayParticipants.txt", sr.ToString());
-                        }
+                            e.Channel.SendMessage("There is no active giveaway at the moment!");
                         else
                         {
-                            e.Channel.SendMessage($"You have already entered {user.Mention}!");
+                            
+                            sr.Append(File.ReadAllText($@"{path}giveawayParticipants.txt"));
+
+                            // store the entering user's name on the giveaway list in a string
+                            if (!giveawayParticipants.Contains(u.Name))
+                            {
+                                giveawayParticipants.Add(u.Name);
+                                e.Channel.SendMessage($"Thank you {u.Mention}! Your entry has been recorded!");
+                                sr.Append($"{u.Name},");
+                                File.WriteAllText($@"{path}giveawayParticipants.txt", sr.ToString());
+                            }
+                            else
+                            {
+                                e.Channel.SendMessage($"You have already entered {u.Mention}!");
+                            }
                         }
-                    }
-                }
-                else if (command.StartsWith("/drawwinners"))
-                {
-                    StringBuilder sr = new StringBuilder(string.Empty);
-                    string path = AppDomain.CurrentDomain.BaseDirectory;
-                    path = path.Substring(0, path.Length - 10);
-                    sr.Append(File.ReadAllText($@"{path}giveawayParticipants.txt"));
-
-                    giveawayParticipants = sr.ToString().Split(',').ToList();
-
-                    // first make sure there is an active giveaway
-                    if (activeGiveaway == false)
-                        e.Channel.SendMessage("There is no active giveaway at the moment!");
-                    else if (giveawayParticipants.Count == 0)
-                        e.Channel.SendMessage("There are no participants in this giveaway!");
-                    else
-                    {
+                        break;
+                    case "/selectwinners":
                         
-                        // next, remove the first part of the command string
-                        clist.Remove("/drawwinners");
+                        sr.Append(File.ReadAllText($@"{path}giveawayParticipants.txt"));
 
-                        if (clist.Count > 0)
+                        giveawayParticipants = sr.ToString().Split(',').ToList();
+
+                        // first make sure there is an active giveaway
+                        if (activeGiveaway == false)
+                            e.Channel.SendMessage("There is no active giveaway at the moment!");
+                        else if (giveawayParticipants.Count == 0)
+                            e.Channel.SendMessage("There are no participants in this giveaway!");
+                        else
                         {
                             // then, make sure the user invoking this message is a manager or an owner
                             foreach (string s in AdminRoles)
                             {
-                                var srvRoles = GetRole(server, s);
+                                var srvRoles = ValidationsAndUtilities.GetRole(e.Server, s);
                                 if (srvRoles == null) continue;
 
                                 if (e.User.HasRole(srvRoles))
                                 {
-                                    int j = Convert.ToInt32(clist[0]);
+                                    int j = Convert.ToInt32(param[0]);
 
                                     j = (j == 0) ? 1 : j;
 
@@ -183,19 +181,24 @@ namespace Botnuki
                                         giveawayParticipants.RemoveAt(r);
                                     }
 
-                                    giveawayParticipants.Clear();
-                                    File.WriteAllText($@"{path}giveawayParticipants.txt", string.Empty);
                                     e.Channel.SendMessage(results);
 
                                 }
                             }
                         }
-                        else
-                            e.Channel.SendMessage("Enter the number of winners for this giveaway!");
-                    }
+                        break;
+                    case "/resetlist":
+                        giveawayParticipants.Clear();
+                        File.WriteAllText($@"{path}giveawayParticipants.txt", string.Empty);
+
+                        e.Channel.SendMessage("Giveaway entrants list reset!");
+                        break;
+                    default:
+                        break;
                 }
+                
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 eventMethod = "bot_MessageReceived";
                 Console.Write(ErrorHandling.ThrowGenException(file, eventMethod, ex.Message));
@@ -208,16 +211,5 @@ namespace Botnuki
             }
         }
 
-        static List<String> getArray(string command)
-        {
-            var array = command.Split(' ');
-            return array.ToList(); 
-        }
-
-        private static Discord.Role GetRole(Server s, string roleContains)
-            =>
-            (from serverRole in s.Roles
-             where serverRole.Name.ToLower().Contains(roleContains)
-             select s.GetRole(serverRole.Id)).FirstOrDefault();
     }
 }
