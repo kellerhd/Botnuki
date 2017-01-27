@@ -15,3 +15,5 @@ So far, the functionallity is as follows:
 The roles authorized for adding or removal are as follows: Smite, League, Paladins, Battlerite, and Ark.
 
 More features will be added to this bot when determined necessary!
+
+This project is now obsolete. For the updated project, please go to: https://github.com/kellerhd/_Botnuki/tree/master
